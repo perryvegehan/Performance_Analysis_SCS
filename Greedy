@@ -1,0 +1,32 @@
+def solve(size, cycle, limit, matrix, i, j, band):
+  c = 0
+  comp = matrix[0]/matrix[4]
+  storage = matrix[1]/matrix[5]
+  dist = ((i-matrix[2])**2+(j-matrix[3])**2)**0.5+c
+  delay = cycle/comp
+  temp = size/band
+  delay = delay+2*temp
+  res = (comp*storage)/(dist*delay)
+  return [res,delay]
+matrix = []
+for i in range(5):
+  l = list(map(int,input().split()))
+  matrix.append(l)
+
+size, cycle, limit, band = map(int,input().split())
+i, j = map(int,input().split())
+ans = float("inf")
+node = -1
+d = 0
+for k in range(5):
+  z = solve(size, cycle, limit, matrix[k], i, j, band)
+  if z[0]<ans:
+    ans = z[0]
+    node = k
+    d = z[1]
+if matrix[k][1]<size or d>limit:
+  print("No node found")
+else:
+  print(node)
+
+
