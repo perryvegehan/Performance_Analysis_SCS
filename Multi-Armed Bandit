@@ -1,0 +1,217 @@
+#include <bits/stdc++.h>
+using namespace std;
+#define ll long long
+int GCD(int a, int b) { if(b == 0){return a;} return GCD(b, a % b); }
+void SWAP(int* a, int* b){int t;t=*a;*a=*b;*b=t;}
+int sum_array(int* a, int n){int i; int s=0;for(i=0;i<n;i++)s=s+a[i];return s;}
+int max_array(int* a, int n){int i;int m=a[0];for(i=0;i<n;i++){if(m<a[i]) m=a[i];}return m;}
+int min_array(int* a, int n){int i;int m=a[0];for(i=0;i<n;i++){ if(m>a[i]) m=a[i];}return m;}
+#define ed "\n"
+#define null NULL
+#define input_array(a,n) for(i=0;i<n;i++)cin>>a[i]
+#define MAXA(a,n) *max_element(a,a+n) 
+#define MINA(a,n) *min_element(a,a+n) 
+#define mod 1000000007
+#define all(x) x.begin(),x.end()
+#define watch(x) cout<<"x= "<<x<<endl;
+double reward_increment(vector<double> &prob,int i)
+{
+    // utility function to be provided
+    return prob[i];
+}
+int greedy(vector<double> &reward)
+{
+    cout<<"in greedy "<<reward[1]<<" "<<reward[2]<<" "<<reward[3]<<ed;
+    double m=*max_element(reward.begin(), reward.end());
+    for(int i=1;i<reward.size();i++)
+    {
+        if(m==reward[i])
+        {
+            cout<<"returning "<<i<<ed;
+            return i;
+        }
+    }
+    // int idx=-1;
+    // for(int i=0;i<reward.size();i++)
+    // {
+    //     if(m<reward[i])
+    //     {
+    //         idx=i; 
+    //         m=reward[i];
+    //     }
+    // }
+    // return idx;
+    return 2;
+}
+void explore(vector<double> &rewards,vector<double> &prob,int num)
+{
+    int n=rewards.size();
+    // srand(time(0));
+    int v;
+    v=num%n;
+    if(v==0)
+    v++;
+    // while(true)
+    // {
+    //     v=rand();
+    //     v=v%n;
+    //     if(v!=0)
+    //     break;   
+    // }
+    // now use v as our ARM
+    cout<<"The arm for this explore round is "<<v<<ed;
+    double inc=reward_increment(prob,v);
+    rewards[v]+=inc;
+    return;
+}
+vector<double> exploit(vector<vector<double>> &a,int num,double step)
+{
+    int n=a[0].size();
+    vector<double> res(n);
+    res[0]=0;
+    double p=1.0;
+    int i;
+    for(i=1;i<n;i++)
+    {
+        double numo=0;
+        for(int j=num;j>=0;j--)
+        {
+            numo+=a[j][i]*p;
+            p=p*step;
+        }
+        double deno=1;
+        double d=step;
+        for(int k=1;k<=num;k++)
+        {
+            deno+=d;
+            d=d*step;
+        }
+        double r=numo/deno;
+        // r is the value
+        double p1=exp(r);
+        double p2=1+exp(r);
+        res[i]=p1/p2;
+    }
+    return res;
+}
+void MAB(vector<int> &comp,vector<pair<int,int>> &coordinates,vector<int> &cores,int n,int src,vector<int> &task,int offload,vector<double> &prob,double step)
+{
+    int C=1;
+    // build the time for each individual FN
+    // we assume the src to be FN(0)
+    src=0;
+    // first compute the distances of all FN from F greedy
+    vector<int> dist(n);
+    dist[0]=0;
+    int i;
+    int x=coordinates[0].first;
+    int y=coordinates[0].second;
+    for(i=1;i<n;i++)
+    {
+        int x1=coordinates[i].first;
+        int y1=coordinates[i].second;
+        int a=abs(x-x1);
+        int b=abs(y-y1);
+        a=a*a;
+        b=b*b;
+        a+=b;
+        int d=(int)sqrt(a);
+        dist[i]=d;
+    }
+    // now compute individual times for each of the FN to complete the subtask
+    vector<int> time(n);
+    time[0]=0;
+    for(i=1;i<n;i++)
+    {
+        int delay=task[1]/comp[i];
+        int tmp=task[1]/task[3];
+        time[i]=delay+2*tmp;
+    }
+    vector<double> utility(n);
+    utility[0]=0;
+    for(i=1;i<n;i++)
+    {
+        int num=(task[2]-time[i])*task[0];
+        int deno=(dist[i]+C)*offload;
+        utility[i]=(double)num/(double)deno;
+    }
+    vector<double> reward(n);
+    reward[0]=0;
+    for(i=1;i<n;i++)
+    {
+        double num=exp(utility[i]);
+        double deno=1+(exp(utility[i]));
+        // deno=1/deno;
+        reward[i]=num/deno;
+    }
+    // we have prepared a final list of rewards
+    reward[1]=0.14517;
+    cout<<"the initial reward configuration is: "<<ed;
+    for(i=1;i<n;i++)
+    {
+        cout<<reward[i]<<" ";
+    }
+    cout<<ed;
+    vector<vector<double>> prev_rewards;
+    prev_rewards.push_back(reward);
+    // cout<<"Starting the Multi-Armed bandit"<<ed;
+    int num=1;
+    while(num<=100)
+    {
+        if(num%5==1)
+        {
+            explore(reward,prob,num);
+            num++;
+            prev_rewards.push_back(reward);
+            for(i=1;i<n;i++)
+            {
+              cout<<reward[i]<<" ";
+            }
+            cout<<ed;
+            continue;
+        }
+        // now calculate the max average reward
+        reward=exploit(prev_rewards,num-1,step);
+        int idx=greedy(reward);
+        cout<<"The arm for Exploit round is "<<idx<<ed;
+        double inc=reward_increment(prob,idx);
+        reward[idx]+=inc;
+        double r=reward[idx];
+        double p1=exp(r);
+        double p2=1+exp(r);
+        reward[idx]=p1/p2;
+        prev_rewards.push_back(reward);
+        num++;
+        for(i=1;i<n;i++)
+        {
+            cout<<reward[i]<<" ";
+        }
+        cout<<ed;
+    }
+    return;
+
+}
+int main()
+{
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
+    // vector<double> a{0.66491,0.5,0.81};
+    // double m=*max_element(a.begin(), a.end());
+    // for(int i=0;i<3;i++)
+    // {
+    //     if(m==a[i])
+    //     cout<<i<<ed;
+    // }
+    // cout<<m<<ed;
+    // return 0;
+    int n=4; // No of FN
+    int offload=100; // power required
+    vector<int> comp{10,20,35,25}; // computational power
+    vector<pair<int,int>> coordinates{{0,0},{4,2},{1,3},{1,1}}; // (x,y)
+    vector<int> cores{10,10,10,10}; 
+    vector<int> task{1,12,130,10}; // size cycle limit  band
+    vector<double> prob{0.012,0.025,0.2,0.31};
+    double step=0.1;
+    MAB(comp,coordinates,cores,n,0,task,offload,prob,step);
+    return 0;
+}
